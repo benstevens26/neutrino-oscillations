@@ -1,4 +1,6 @@
-""" Functions module
+""" Main
+
+Function: oscillation_probability: Return probability that muon neutrino has not oscillated
 
 """
 
@@ -6,8 +8,9 @@ import numpy as np
 from numpy import sin
 from scipy.special import factorial
 
-# unoscillated prediction
+# import data
 unosc_flux_prediction = np.loadtxt("bs521.txt", skiprows=204)
+data = np.loadtxt("bs521.txt", skiprows=2, max_rows=200)
 
 
 def oscillation_probability(u, L, E):
