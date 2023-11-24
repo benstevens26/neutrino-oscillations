@@ -1,11 +1,7 @@
-import numpy as np
+from main import *
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from functions import *
 
-# data
-data = np.loadtxt("bs521.txt", skiprows=2, max_rows=200)
-unosc_flux_prediction = np.loadtxt("bs521.txt", skiprows=204)
 
 # params
 mpl.rcParams['pdf.fonttype'] = 42
@@ -36,8 +32,6 @@ def fig2():
     plt.ylabel("Number of events")
     plt.xlabel("Energy (GeV)")
     plt.hist(bins[:-1], bins, weights=unosc_flux_prediction)
-    plt.show()
-
     plt.show()
 
 
@@ -90,7 +84,7 @@ def fig4(theta=np.pi/4, delta_m=2.4e-3, L=295):
 
 
 def fig5(delta_m=2.4e-3):
-    """NLL against theta"""
+    """Negative log likelihood against mixing angle"""
 
     # theta range 0 to 2pi
     theta_vals = np.linspace(0, 2*np.pi, 1000)
@@ -98,7 +92,7 @@ def fig5(delta_m=2.4e-3):
     # u values to calculate NPP for
     u_vals = [[i, delta_m] for i in theta_vals]
 
-    NPP_vals = [negative_log_likelihood(u=i) for i in u_vals]
+    npp_vals = [negative_log_likelihood(u=i) for i in u_vals]
 
     fig = plt.figure(figsize=(12, 8))
     plt.grid(alpha=0.3)
@@ -106,16 +100,14 @@ def fig5(delta_m=2.4e-3):
     plt.xlabel('$\\theta_{23}$ ($\pi$ rads)')
     plt.ylabel('Negative log likelihood')
 
+    # normalized_npp = npp_vals / np.sqrt(np.sum([i**2 for i in npp_vals]))
+    # plt.plot(theta_vals/np.pi, normalized_npp)
 
-    plt.plot(theta_vals/np.pi, NPP_vals)
+    plt.plot(theta_vals/np.pi, npp_vals)
 
     plt.show()
 
 
-fig5()
-
-fig4(theta=0.5 * np.pi)
-fig4(theta=0.25 * np.pi)
 
 
 
