@@ -50,3 +50,62 @@ def negative_log_likelihood(u):
     return NLL
 
 
+def parabolic_minimiser(function, a, b, c, tolerance=1e-6, max_iter=100):
+    """ find local minimum using parabolic interpolation
+
+    :param function: function to minimise
+    :param a, b, c: x values to perform initial interpolation
+    :param tolerance: tolerance to provide stopping point
+    :param max_iter: maximum number of iterations
+    :return: estimate of minimizer x_min
+    """
+    for i in range(max_iter):
+        y_a, y_b, y_c = function(a), function(b), function(c)
+        y_min = min([y_a, y_b, y_c])
+
+        top = ((c*c)-(b*b))*y_a + ((a*a)-(c*c))*y_b + ((b*b)-(a*a))*y_c
+        bottom = (c-b)*y_a + (a-c)*y_b + (b-a)*y_c
+
+        d = 0.5 * (top / bottom)
+        y_d = function(d)
+
+        if abs(y_d - y_min) < tolerance:
+            return d
+
+        x_list = [a, b, c, d]
+        y_list = [y_a, y_b, y_c, y_d]
+
+        max_index = y_list.index(max(y_list))
+
+        x_list.pop(max_index)
+
+        a, b, c = x_list[0], x_list[1], x_list[2]
+
+    print("Maximum Iterations Reached")
+    return d
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
