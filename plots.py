@@ -13,7 +13,6 @@ mpl.style.use('ben')
 plt.rcParams['font.family'] = 'Times New Roman'
 
 
-
 def fig1():
     """Histogram of event energies"""
     bins = np.linspace(0, 10, 201)
@@ -32,7 +31,6 @@ def fig1():
     plt.tight_layout()
     plt.savefig('figs/fig1.png')
     plt.show()
-
 
 
 def fig2():
@@ -94,47 +92,48 @@ def fig3(e_range, theta=np.pi/4, delta_m=2.4e-3, L=295):
     fig = plt.figure(figsize=(8, 6), dpi=100)
     xticks = np.arange(0, e_range[1]+1, (e_range[1])/10)
     yticks = np.arange(0, 1.1, 0.1)
-    plt.xticks(xticks)
-    plt.yticks(yticks)
     plt.xlim(0, e_range[1])
     plt.ylim(0, 1)
 
     plt.ylabel('Oscillation probability')
     plt.xlabel(r"$\nu_{\mu}$ energy (GeV)")
 
-    plt.plot(energy_vals, p_vals, color='lightcoral',
+    plt.plot(energy_vals, p_vals, color='royalblue',
              label=r"${\theta}_{23}$ ="+str(theta/np.pi)+r"$\pi$"+"\n"+"${\Delta}m_{23}^{2}$ ="+str(delta_m))
 
+    plt.xticks(xticks)
+    plt.yticks(yticks)
     plt.legend(loc=(0.5, 0.7))
     plt.tight_layout()
     plt.savefig('figs/fig3.png')
     plt.show()
 
 
-def fig4(theta=np.pi/4, delta_m=2.4e-3, L=295):
-    """Oscillated event rate prediction"""
+def fig4(theta=np.pi/4, delta_m=2.4e-3):
+    """Predicted event energies (oscillated)"""
     bins = np.linspace(0, 10, 201)
-    bin_midpoints = np.arange(0.025, 10, 0.05)
     u = [theta, delta_m]
+    lambda_i = get_lambda(u)
 
-    p = [oscillation_probability(u, L, i) for i in bin_midpoints]
-    lambda_i = p * unosc_flux_prediction
+    fig = plt.figure(figsize=(8, 6), dpi=100)
+    xticks = np.arange(0, 11, 1)
+    # yticks = np.arange(0, 24, 2)
 
-    fig = plt.figure(figsize=(12, 8))
-    plt.grid(alpha=0.3)
-    plt.title("Oscillated event rate prediction $\lambda_i (\\bf{u}\\sf)$")
-    plt.xlabel('Energy (GeV)')
-    plt.ylabel('Number of events')
+    plt.ylabel("Events")
+    # plt.ylim(0, 23)
+    plt.xlim(0, 10)
+    plt.xlabel(r"$\nu_{\mu}$ energy (GeV)")
+    plt.xticks(xticks)
+    # plt.yticks(yticks)
 
-    plt.hist(bins[:-1], bins, weights=lambda_i, label="${\\theta}_{23} = $"+str(theta/np.pi)+"$\pi$ \n"
-                                        "${\\Delta}m_{23}^{2} = $"+str(delta_m)+" \n"
-                                        "$L = $"+str(L))
+    plt.hist(bins[:-1], bins, color='darkturquoise', weights=lambda_i, label="${\\theta}_{23} = $"+str(theta/np.pi)+"$\pi$ \n"
+                                        "${\\Delta}m_{23}^{2} = $"+str(delta_m))
 
+    plt.hist(bins[:-1], bins, color='lightcoral', weights=data, label=r"detected $\nu_{\mu}$")
 
-    plt.hist(bins[:-1], bins, weights=data, label="${\\theta}_{23} = $"+"???"+" \n"
-                                        "${\\Delta}m_{23}^{2} = $"+"???"+" \n"
-                                        "$L = $"+"295")
-    plt.legend()
+    plt.legend(loc=(0.5, 0.4))
+    plt.tight_layout()
+    plt.savefig('figs/fig4.png')
     plt.show()
 
 
@@ -233,7 +232,8 @@ def fig7():
     # plt.show()
 
 fig2_2()
-fig3(e_range=[0,10])
+fig3([0,10])
+fig4()
 
 
 
