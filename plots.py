@@ -1,10 +1,10 @@
 import numpy as np
+import scipy.misc
 
 from main import *
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import latex
 
 mpl.style.use('ben')
 
@@ -117,14 +117,14 @@ def fig4(theta=np.pi/4, delta_m=2.4e-3):
 
     fig = plt.figure(figsize=(8, 6), dpi=100)
     xticks = np.arange(0, 11, 1)
-    # yticks = np.arange(0, 24, 2)
+    yticks = np.arange(0, max(lambda_i)+5, 5)
 
     plt.ylabel("Events")
-    # plt.ylim(0, 23)
+    plt.ylim(0, max(lambda_i))
     plt.xlim(0, 10)
     plt.xlabel(r"$\nu_{\mu}$ energy (GeV)")
     plt.xticks(xticks)
-    # plt.yticks(yticks)
+    plt.yticks(yticks)
 
     plt.hist(bins[:-1], bins, color='darkturquoise', weights=lambda_i, label="${\\theta}_{23} = $"+str(theta/np.pi)+"$\pi$ \n"
                                         "${\\Delta}m_{23}^{2} = $"+str(delta_m))
@@ -138,65 +138,111 @@ def fig4(theta=np.pi/4, delta_m=2.4e-3):
 
 
 def fig5(delta_m=2.4e-3):
-    """Negative log likelihood against mixing angle"""
+    """Negative log likelihood against mixing angle (fixed delta_m)"""
 
-    # theta range 0 to 2pi
-    theta_vals = np.linspace(0, 2*np.pi, 1000)
-
-    # u values to calculate NPP for
+    theta_vals = np.linspace(0, np.pi/2, 2000)
     u_vals = [[i, delta_m] for i in theta_vals]
+    nll_vals = [negative_log_likelihood(u=i) for i in u_vals]
 
-    npp_vals = [negative_log_likelihood(u=i) for i in u_vals]
+    # u_vals_2 = [[i, 2.5e-3] for i in theta_vals]
+    # npp_vals_2 = [negative_log_likelihood(u=i) for i in u_vals_2]
 
-    fig = plt.figure(figsize=(12, 8))
-    plt.grid(alpha=0.3)
-    plt.title("NLL against $\\theta_{23}$")
-    plt.xlabel('$\\theta_{23}$ ($\pi$ rads)')
-    plt.ylabel('Negative log likelihood')
 
-    # normalized_npp = npp_vals / np.sqrt(np.sum([i**2 for i in npp_vals]))
-    # plt.plot(theta_vals/np.pi, normalized_npp)
+    fig = plt.figure(figsize=(8, 6), dpi=100)
+    xticks = np.arange(0, 1/2 + 0.05, 0.05)
+    # yticks = np.arange(0, 1., 0.1)
+    plt.xlim(0, 1/2)
+    # plt.ylim(0, 1)
 
-    plt.plot(theta_vals/np.pi, npp_vals)
+    plt.ylabel('Negative log-likelihood')
+    plt.xlabel(r"Mixing angle $\theta_{23}$ /$ \pi$")
 
+    plt.plot(theta_vals/np.pi, nll_vals, lw=2, color='royalblue',
+             label=r"${\Delta}m_{23}^{2}$ = "+str(delta_m))
+
+    # plt.plot(theta_vals/np.pi, npp_vals_2, color='mediumorchid',
+    #          label=r"${\Delta}m_{23}^{2}$ ="+str(2.5e-3))
+
+    plt.xticks(xticks)
+    # plt.yticks(yticks)
+    plt.legend(loc=(0.3, 0.7))
+    plt.tight_layout()
+    plt.savefig('figs/fig5.png')
     plt.show()
 
 
 def fig6(delta_m=2.4e-3):
-    """NLL against mixing angle"""
-    # testing minimiser on NPP data
-    a = 0.12 * np.pi
-    b = 0.23 * np.pi
-    c = 0.44 * np.pi
+    """NLL against mixing angle with parabolic minimisation"""
 
-    theta_min = parabolic_minimiser(negative_log_likelihood, a, b, c)
-    nll_min = negative_log_likelihood(theta_min)
+    a, b, c = gen_points([np.pi/4 - 0.3, np.pi/4 + 0.3])
 
-    # theta range 0 to 2pi
-    theta_vals = np.linspace(0, np.pi/2, 5000)
+    theta_min, delta_m = parabolic_minimiser_nd(nll2, axis=0, x0=[np.pi/4, delta_m], xrange=0.3)
 
-    npp_vals = [negative_log_likelihood(i) for i in theta_vals]
+    nll_min = negative_log_likelihood(u=[theta_min, delta_m])
 
-    fig = plt.figure(figsize=(12, 8))
-    plt.grid(alpha=0.3)
-    plt.title("NLL against $\\theta_{23}$")
-    plt.xlabel('$\\theta_{23}$ ($\pi$ rads)')
-    plt.ylabel('Negative log likelihood')
-    plt.plot(theta_min/np.pi, nll_min, 'ro', label='$\\theta$ ='+str(theta_min/np.pi)+"$\pi$")
-    plt.plot(theta_vals/np.pi, npp_vals)
-    plt.legend()
+    print(r"\sin{\theta_{23}}")
+
+    exit()
+
+    theta_lb, theta_ub = nll_error([theta_min, delta_m])
+    nll_lb = negative_log_likelihood([theta_lb, delta_m])
+    nll_ub = negative_log_likelihood([theta_ub, delta_m])
+
+    # curv_err = 1/np.sqrt(curvature)  # error from curvature
+    # print("theta errors from curvature")
+    # print(theta_min - curv_err)
+    # print(theta_min + curv_err)
+
+    theta_vals = np.linspace(0, np.pi/2, 2000)
+    u_vals = [[i, delta_m] for i in theta_vals]
+    nll_vals = [negative_log_likelihood(u=i) for i in u_vals]
+
+    fig = plt.figure(figsize=(8, 6), dpi=100)
+    # xticks = np.arange(0, 1/2 + 0.05, 0.05)
+    # yticks = np.arange(0, 1., 0.1)
+    plt.xlim(0.15, 1/2)
+    plt.ylim(min(nll_vals)-100, max(nll_vals)+50)
+
+    plt.ylabel('Negative log-likelihood')
+    plt.xlabel(r"Mixing angle $\theta_{23}$ /$ \pi$")
+
+    plt.plot(theta_vals/np.pi, nll_vals, lw=2, color='royalblue',
+             label=r"${\Delta}m_{23}^{2}$ = "+str(delta_m))
+
+    plt.plot(theta_min/np.pi, nll_min, color="black", marker="s",
+             markersize=5, linestyle="None", label=r"$\theta_{23}$ = "+str(np.round(theta_min, 4)))
+
+    plt.plot(theta_lb/np.pi, nll_lb, color="red", marker="s",
+             markersize=5, linestyle="None", label=r"$\theta_{23}^{-}$ = "+str(np.round(theta_lb, 4)))
+
+    plt.plot(theta_ub/np.pi, nll_ub, color="red", marker="s",
+             markersize=5, linestyle="None", label=r"$\theta_{23}^{+}$ = "+str(np.round(theta_ub, 4)))
+
+    plt.vlines(theta_min/np.pi, ymin=min(nll_vals)-150, ymax=max(nll_vals)+150, color='black', linestyle='--')
+    plt.vlines(theta_lb/np.pi, ymin=min(nll_vals)-150, ymax=max(nll_vals)+150, color='red', linestyle='--')
+    plt.vlines(theta_ub/np.pi, ymin=min(nll_vals)-150, ymax=max(nll_vals)+150, color='red', linestyle='--')
+    plt.vlines(theta_min/np.pi, ymin=min(nll_vals)-150, ymax=max(nll_vals)+150, color='red', alpha=0.2, linewidth=10)
+
+    # plt.plot(theta_vals/np.pi, npp_vals_2, color='mediumorchid',
+    #          label=r"${\Delta}m_{23}^{2}$ ="+str(2.5e-3))
+
+    # plt.xticks(xticks)
+    # plt.yticks(yticks)
+    plt.legend(loc=(0.65, 0.07), fontsize=16)
+    plt.tight_layout()
+    plt.savefig('figs/fig6.png')
     plt.show()
 
+
 def fig7():
-    """Contour plot"""
+    """2D Contour plot"""
 
     # theta and delta m values to use
     theta_vals = np.linspace(0.67, 0.9, 400)
     delta_m_vals = np.linspace(2.3e-3, 2.6e-3, 400)
     X, Y = np.meshgrid(theta_vals, delta_m_vals)
 
-
-    npp_vals = [[negative_log_likelihood(u=[X[i,j], Y[i,j]]) for j in range(len(theta_vals))] for i in tqdm(range(len(theta_vals)))]
+    npp_vals = [[nll2(u=[X[i,j], Y[i,j]]) for j in range(len(theta_vals))] for i in tqdm(range(len(theta_vals)))]
 
     plt.figure()
     plt.contourf(X, Y, npp_vals)
@@ -231,9 +277,13 @@ def fig7():
     #
     # plt.show()
 
-fig2_2()
-fig3([0,10])
-fig4()
+
+def fig8():
+    """"""
+
+
+fig6()
+
 
 
 
