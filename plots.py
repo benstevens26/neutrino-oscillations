@@ -87,7 +87,7 @@ def fig3(e_range, theta=np.pi/4, delta_m=2.4e-3, L=295):
     energy_vals = np.linspace(e_range[0], e_range[1], 100000)
     u = [theta, delta_m]
 
-    p_vals = [oscillation_probability(u, L, i) for i in energy_vals]
+    p_vals = [oscillation_probability(u, i) for i in energy_vals]
 
     fig = plt.figure(figsize=(8, 6), dpi=100)
     xticks = np.arange(0, e_range[1]+1, (e_range[1])/10)
@@ -171,6 +171,40 @@ def fig5(delta_m=2.4e-3):
     plt.show()
 
 
+def fig5_5(theta=np.pi/4):
+    """Negative log likelihood against delta_m (fixed theta)"""
+
+    delta_m_vals = np.linspace(1e-3, 4e-3, 2000)
+    u_vals = [[theta, i] for i in delta_m_vals]
+    nll_vals = [negative_log_likelihood(u=i) for i in u_vals]
+
+    # u_vals_2 = [[i, 2.5e-3] for i in theta_vals]
+    # npp_vals_2 = [negative_log_likelihood(u=i) for i in u_vals_2]
+
+
+    fig = plt.figure(figsize=(8, 6), dpi=100)
+    xticks = np.arange(1e-3, 4.1e-3, 0.5e-3)
+    # yticks = np.arange(0, 1., 0.1)
+    plt.xlim(1e-3, 4e-3)
+    # plt.ylim(0, 1)
+
+    plt.ylabel('Negative log-likelihood')
+    plt.xlabel("Squared mass difference (eV^2)")
+
+    plt.plot(delta_m_vals, nll_vals, lw=2, color='royalblue',
+             label=r"$\theta_{23}$ = "+str(np.round(theta, 3)))
+
+    # plt.plot(theta_vals/np.pi, npp_vals_2, color='mediumorchid',
+    #          label=r"${\Delta}m_{23}^{2}$ ="+str(2.5e-3))
+
+    plt.xticks(xticks)
+    # plt.yticks(yticks)
+    plt.legend(loc=(0.3, 0.7))
+    plt.tight_layout()
+    plt.savefig('figs/fig5_5.png')
+    plt.show()
+
+
 def fig6(delta_m=2.4e-3):
     """NLL against mixing angle with parabolic minimisation"""
 
@@ -180,9 +214,7 @@ def fig6(delta_m=2.4e-3):
 
     nll_min = negative_log_likelihood(u=[theta_min, delta_m])
 
-    print(r"\sin{\theta_{23}}")
-
-    exit()
+    print(r"$\sin{\theta_{23}}$")
 
     theta_lb, theta_ub = nll_error([theta_min, delta_m])
     nll_lb = negative_log_likelihood([theta_lb, delta_m])
@@ -237,15 +269,42 @@ def fig6(delta_m=2.4e-3):
 def fig7():
     """2D Contour plot"""
 
+    theta_min = 0.8080466225297152
+    delta_m_min = 0.0024334819681467263
     # theta and delta m values to use
-    theta_vals = np.linspace(0.67, 0.9, 400)
-    delta_m_vals = np.linspace(2.3e-3, 2.6e-3, 400)
+    theta_vals = np.linspace(theta_min-0.1, theta_min+0.1, 400)
+    delta_m_vals = np.linspace(delta_m_min-1e-3, delta_m_min+1e-3, 400)
     X, Y = np.meshgrid(theta_vals, delta_m_vals)
 
-    npp_vals = [[nll2(u=[X[i,j], Y[i,j]]) for j in range(len(theta_vals))] for i in tqdm(range(len(theta_vals)))]
+    Z = [[negative_log_likelihood(u=[X[i,j], Y[i,j]])
+                 for j in range(len(theta_vals))] for i in tqdm(range(len(theta_vals)))]
+    nll_min = min(Z)
+
+    Z = np.array(Z)
 
     plt.figure()
-    plt.contourf(X, Y, npp_vals)
+    plt.contourf(X, Y, Z)
+    plt.show()
+
+    ax = plt.figure().add_subplot(projection='3d')
+
+    # Plot the 3D surface
+    ax.plot_surface(X, Y, Z, edgecolor='royalblue', lw=0.5, rstride=8, cstride=8,
+                    alpha=0.3)
+
+    ax.scatter(theta_min, delta_m_min, nll_min, label="Minima")
+
+    # Plot projections of the contours for each dimension.  By choosing offsets
+    # that match the appropriate axes limits, the projected contours will sit on
+    # the 'walls' of the graph.
+    # ax.contour(X, Y, Z, zdir='z', offset=-100, cmap='coolwarm')
+    # ax.contour(X, Y, Z, zdir='x', offset=-40, cmap='coolwarm')
+    # ax.contour(X, Y, Z, zdir='y', offset=40, cmap='coolwarm')
+
+    ax.set(xlim=(theta_vals[0], theta_vals[-1]), ylim=(delta_m_vals[0], delta_m_vals[-1]), zlim=(1000, 2000),
+           xlabel=r'$\theta_{23}$', ylabel=r"$\Delta m_{23}^{2}$", zlabel='Negative log-likelihood')
+
+
     plt.show()
 
     # npp_vals = [[negative_log_likelihood(u=[i,j]) for i in theta_vals] for j in delta_m_vals]
@@ -281,8 +340,26 @@ def fig7():
 def fig8():
     """"""
 
+    u_vals = []
+    for i in range(10):
+        u_min = univariate_minimiser(nll2, x0=[np.pi/4, 2.4e-3], xrange=[0.3, 1e-3], max_iter=250, tol=1e-6)
+        u_vals.append(u_min)
 
-fig6()
+    print(u_vals)
+
+    nll_vals = [negative_log_likelihood(i) for i in u_vals]
+
+    print(u_vals[nll_vals.index(min(nll_vals))])
+
+    print(np.mean(nll_vals), np.std(nll_vals))
+
+    # print(negative_log_likelihood([0.8088, 2.4e-3]))
+    # print(negative_log_likelihood(u_min))
+
+
+
+
+fig7()
 
 
 
