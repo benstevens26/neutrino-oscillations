@@ -474,15 +474,16 @@ def quasi_newton_minimiser(f, x0, args=(), h=1e-8, tol=1e-6, max_iter=1e5, full_
     return x
 
 
-def minimise(f, x0, x_range=None, args=(), method: str = "quasi-newton"):
+def minimise(f, x0, x_range=None, args=(), runs=100, method: str = "quasi-newton"):
     """ Return minima of function f within x_range
 
     :param f: objective function to be minimised
     :param x0: initial guess for each parameter
     :param x_range: width of search range for each parameter (default: 0.5 * x0 in each parameter)
     :param args: arguments to be passed to the objective function
+    :param runs: number of different restarts searching for global minima
     :param method: "gradient-descent" "quasi-newton" "univariate" default is "quasi-newton"
-    :return:
+    :return: minima: list of minima, one from each run
     """
 
     if x_range is None:
@@ -492,28 +493,32 @@ def minimise(f, x0, x_range=None, args=(), method: str = "quasi-newton"):
     x_range = np.array(x_range, dtype=np.float64)
     dims = len(x0)
     initial_guesses = np.zeros(dims)
-    mins = []
+    minima = []
 
     if method == "gradient-descent":
-        pass
 
-        for i in range(100):
-            x_min = gradient_descent()
+        for i in tqdm(range(runs)):
+            for j in range(len(x0)):
+                initial_guesses[j] = (x0[j] - x_range[j]/2) + (np.random.rand() * x_range[j])
+
+            x_min = gradient_descent(f, x0=initial_guesses, args=args)
+            minima.append(x_min)
+
+        return minima
 
     if method == "quasi-newton":
 
-        for i in tqdm(range(5000)):
+        for i in tqdm(range(runs)):
             for j in range(len(x0)):
                 initial_guesses[j] = (x0[j] - x_range[j]/2) + (np.random.rand() * x_range[j])
 
             x_min = quasi_newton_minimiser(f, x0=initial_guesses, args=args)
-            mins.append(x_min)
+            minima.append(x_min)
 
-        return mins
-
+        return minima
 
     if method == "univariate":
-        pass
+        raise NotImplementedError
 
     return
 
