@@ -1,4 +1,15 @@
-""" Main
+"""
+NOTES
+-----
+This module uses an NLL fit to extract neutrino oscillation parameters
+from simulated T2K data. More detail can be found in README.md
+
+NAME
+    neutrino_oscillation
+
+FUNCTIONS
+    oscillation_probability():
+        Return muon neutrino survival probability
 
 """
 
@@ -16,8 +27,9 @@ data = np.loadtxt("bs521.txt", skiprows=2, max_rows=200)
 L = 295
 
 
-def oscillation_probability(u, E):
-    """ Return survival probability of muon neutrino
+def oscillation_probability(u: list, E: float):
+    """
+    Return survival probability of muon neutrino
 
     :param u: list of parameters [mixing_angle (rad), squared_mass_difference (eV^2)]
     :param E: muon neutrino energy (GeV)
@@ -301,7 +313,7 @@ def univariate_minimiser(f, x0, xrange, args=(),
     return x0
 
 
-def gradient_descent(f, x0, h, alpha, args=(), tol=1e-6, max_iter=1e6, full_output=False):
+def gradient_descent(f, x0, h=1e-4, alpha=1e-8, args=(), tol=1e-6, max_iter=1e5, full_output=False):
     """ Return minima of f using gradient descent
 
     :param f: objective function to be minimised
@@ -321,7 +333,7 @@ def gradient_descent(f, x0, h, alpha, args=(), tol=1e-6, max_iter=1e6, full_outp
     grad = np.zeros(dims, dtype=np.float64)
     points = []
 
-    for i in tqdm(range(max_iter)):
+    for i in range(max_iter):
 
         for j in range(dims):
             x0_plus_h = x0.copy()
@@ -331,7 +343,12 @@ def gradient_descent(f, x0, h, alpha, args=(), tol=1e-6, max_iter=1e6, full_outp
         x1 = x0 - (alpha * grad)
         points.append(x1)
 
-        if np.linalg.norm(x1 - x0) < tol and abs(negative_log_likelihood(x1)-negative_log_likelihood(x0)) < tol:
+        if full_output:
+            print("Iteration:", i)
+            print("Gradient:", grad)
+            print("f(x):", f(x1))
+
+        if np.linalg.norm(f(x1) - f(x0)) < tol:
             if full_output:
                 return x1, f(x1), i+1, points
             return x1
@@ -339,6 +356,43 @@ def gradient_descent(f, x0, h, alpha, args=(), tol=1e-6, max_iter=1e6, full_outp
         x0 = x1.copy()
 
     return x1
+
+
+
+def quasi_newton_minimiser():
+    pass
+
+
+def minimise(f, x0, x_range=None, args=(), method:str ="gradient-descent"):
+    """ Return minima of function f within x_range
+
+    :param f: objective function to be minimised
+    :param x0: initial guess for each parameter
+    :param x_range: width of search range for each parameter (default: 0.5 * x0 in each parameter)
+    :param args: arguments to be passed to the objective function
+    :param method: "gradient-descent" or "quasi-newton"
+    :return:
+    """
+
+    if x_range is None:
+        x_range = [n*0.5 for n in x0]
+
+    x0 = np.array(x0, dtype=np.float64)
+    x_range = np.array(x_range, dtype=np.float64)
+
+    if method == "gradient-descent":
+        pass
+
+
+    if method == "quasi-newton":
+        pass
+
+    return
+
+
+
+
+
 
 
 
