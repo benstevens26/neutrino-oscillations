@@ -10,12 +10,22 @@ NAME
 FUNCTIONS
     oscillation_probability():
         Return muon neutrino survival probability
+    get_lambda():
+        Return oscillated rate event prediction
+    negative_log_likelihood():
+        Return negative log likelihood for given oscillation parameters
+    nll2():
+        Alternative negative log likelihood function, more efficient for
+        changes in nll
+
+
 
 """
 
 import numpy as np
 from numpy import sin
 from scipy.special import factorial
+from scipy.optimize import line_search as ls
 from tqdm import tqdm
 
 
@@ -49,7 +59,7 @@ def get_lambda(u):
     p = [oscillation_probability(u, i) for i in bin_midpoints]
 
     if len(u) == 3:
-        return p * unosc_flux_prediction * u[2] * bin_midpoints
+        return p * unosc_flux_prediction * abs(u[2]) * bin_midpoints
 
     return p * unosc_flux_prediction
 
@@ -450,17 +460,14 @@ def quasi_newton_minimiser(f, x0, args=(), h=1e-8, tol=1e-6, max_iter=1e5, full_
         # search direction
         direction = - (H @ grad)
 
-        # using backtracking line search
+        # using backtracking line search with Armijo-Goldstein conditions
         alpha = line_search(f, x, grad, direction)
-        # print(alpha)
-
-        # alpha = ls(f, f_prime, x, direction)
-        # alpha = alpha[0]
-
-        if alpha is None:
-            return x
-
         x_new = x + (alpha * direction)
+
+        if np.linalg.norm(x_new - x) < tol:
+            if full_output:
+                return x, f(x, *args), i, points
+            return x
 
         grad_new = f_prime(x_new)
         x_change = x_new - x
@@ -474,7 +481,7 @@ def quasi_newton_minimiser(f, x0, args=(), h=1e-8, tol=1e-6, max_iter=1e5, full_
     return x
 
 
-def minimise(f, x0, x_range=None, args=(), runs=100, method: str = "quasi-newton"):
+def minimise(f, x0, x_range=None, tol=1e-6, args=(), runs=100, method: str = "quasi-newton"):
     """ Return minima of function f within x_range
 
     :param f: objective function to be minimised
@@ -501,7 +508,7 @@ def minimise(f, x0, x_range=None, args=(), runs=100, method: str = "quasi-newton
             for j in range(len(x0)):
                 initial_guesses[j] = (x0[j] - x_range[j]/2) + (np.random.rand() * x_range[j])
 
-            x_min = gradient_descent(f, x0=initial_guesses, args=args)
+            x_min = gradient_descent(f, x0=initial_guesses, args=args, tol=tol)
             minima.append(x_min)
 
         return minima
@@ -512,7 +519,7 @@ def minimise(f, x0, x_range=None, args=(), runs=100, method: str = "quasi-newton
             for j in range(len(x0)):
                 initial_guesses[j] = (x0[j] - x_range[j]/2) + (np.random.rand() * x_range[j])
 
-            x_min = quasi_newton_minimiser(f, x0=initial_guesses, args=args)
+            x_min = quasi_newton_minimiser(f, x0=initial_guesses, args=args, tol=tol)
             minima.append(x_min)
 
         return minima
@@ -521,48 +528,4 @@ def minimise(f, x0, x_range=None, args=(), runs=100, method: str = "quasi-newton
         raise NotImplementedError
 
     return
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

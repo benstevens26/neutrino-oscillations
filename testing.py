@@ -1,8 +1,9 @@
-from main import *
+from neutrino_oscillation import *
 from numpy import cos
 from numpy import sin
 import matplotlib.pyplot as plt
 import numpy as np
+import neutrino_oscillation
 
 
 def test_function(x):
@@ -10,28 +11,24 @@ def test_function(x):
     f = cos(x) + 5*cos(1.6*x) - 2*cos(2*x) + 5*cos(4.5*x) + 7*cos(9*x)
     return f
 
-def dim2_test_function(u):
-    """has about 10 local minima in range 0 < x < 7"""
+
+def test_function_2(u):
+    """simple test function for 2d minimisation"""
     x = u[0]
     y = u[1]
     f = x**2 + y**2
     return f
 
-y_min = parabolic_minimiser_nd(dim2_test_function, axis=1, x0 = [-1,1], xrange = 10, full_output=False)
 
-print(y_min)
-# print(dim2_test_function(u=[0, 0.5]))
+def test_function_3(u):
+    """simple test function for 3d minimisation"""
+    x = u[0]
+    y = u[1]
+    z = u[2]
+    f = x**2 + y**2 + z**2
+    return f
 
-#
-# xs = [coord[0] for coord in points]
-# ys = [coord[1] for coord in points]
-#
-# x = np.linspace(0, 2*np.pi, 1000)
-# y = test_function(x)
-#
-# plt.figure()
-# plt.plot(xs, ys, 'o')
-# plt.plot(x, y, linestyle="--")
-# plt.vlines([0.3, 0.35, 0.5], ymin=min(y), ymax=max(y), linestyle="--")
-# plt.show()
 
+def test_function_4(u):
+    """simple test function for 3d minimisation"""
+    return u[0]**2 + u[1]**2 + u[2]**2 + u[3]**2
