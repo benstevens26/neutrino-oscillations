@@ -54,7 +54,6 @@ def get_lambda(u):
     return p * unosc_flux_prediction
 
 
-
 def negative_log_likelihood(u):
     """ Return negative log likelihood for given parameters
 
@@ -255,7 +254,6 @@ def parabolic_minimiser_nd(f, axis, x0, xrange: float, args=(),
         y_list.append(y4)
 
         if x4[axis] == x1[axis] or x4[axis] == x2[axis] or x4[axis] == x3[axis]:
-            # print("Degenerate case encountered, regenerating initial guesses")
             a, b, c = gen_points([x1[axis], x3[axis]])
             x1[axis] = a
             x2[axis] = b
@@ -313,7 +311,32 @@ def univariate_minimiser(f, x0, xrange, args=(),
     return x0
 
 
-def gradient_descent(f, x0, h=1e-4, alpha=1e-8, args=(), tol=1e-6, max_iter=1e5, full_output=False):
+def gradient(f, x, h, args=()):
+    """Return gradient of function f at x using a finite difference approximation"""
+    dims = len(x)
+    grad = np.zeros(dims, dtype=np.float64)
+    for i in range(dims):
+        x_plus_h = x.copy()
+        x_plus_h[i] += h
+        x_minus_h = x.copy()
+        x_minus_h[i] -= h
+        grad[i] = (f(x_plus_h, *args) - f(x_minus_h, *args)) / (2*h)
+    return grad
+
+
+def gradient_callable(f, h=1e-6, args=()):
+    """Return gradient function of function f at x using a finite difference approximation"""
+    def get_grad(x, args=args):
+        grad = gradient(f, x, h=h, args=args)
+        return grad
+
+    def grad_callable(x):
+        return get_grad(x)
+
+    return grad_callable
+
+
+def gradient_descent(f, x0, h=1e-8, alpha=1e-8, args=(), tol=1e-6, max_iter=1e5, full_output=False):
     """ Return minima of f using gradient descent
 
     :param f: objective function to be minimised
@@ -335,10 +358,7 @@ def gradient_descent(f, x0, h=1e-4, alpha=1e-8, args=(), tol=1e-6, max_iter=1e5,
 
     for i in range(max_iter):
 
-        for j in range(dims):
-            x0_plus_h = x0.copy()
-            x0_plus_h[j] += h
-            grad[j] = (f(x0_plus_h, *args) - f(x0, *args)) / h
+        grad = gradient(f, x0, h=h, args=args)
 
         x1 = x0 - (alpha * grad)
         points.append(x1)
@@ -358,19 +378,110 @@ def gradient_descent(f, x0, h=1e-4, alpha=1e-8, args=(), tol=1e-6, max_iter=1e5,
     return x1
 
 
+def line_search(f, x, grad, direction, args=()):
+    """Return alpha value that satisfies the Armijo-Goldstein condition"""
 
-def quasi_newton_minimiser():
-    pass
+    alpha = 1
+    c = 0.1
+    p = 0.5
+
+    x_guess = x + (alpha * direction)
+    f_guess = f(x_guess, *args)
+    f_x = f(x, *args)
+
+    while f_guess > (f_x + c * alpha * (grad.T @ direction)):
+        alpha = p * alpha
+        x_guess = x + (alpha * direction)
+        f_guess = f(x_guess)
+
+    return alpha
 
 
-def minimise(f, x0, x_range=None, args=(), method:str ="gradient-descent"):
+def update_hessian(hessian, x_change, grad_change):
+    """Return updated inverse Hessian approximation via DFP method"""
+    term1 = np.outer(x_change, x_change) / np.dot(grad_change, x_change)
+    term2_n = (hessian @ np.outer(grad_change, grad_change) @ hessian)
+    term2_d = grad_change @ hessian @ grad_change
+    H = hessian + term1 - (term2_n / term2_d)
+    return H
+
+
+def update_hessian_2(hessian, x_change, grad_change):
+    """Return updated inverse Hessian approximation via BFGS method"""
+    I = np.identity(len(x_change))
+    roe = 1 / (grad_change.T @ x_change)
+    H = ((I - (roe * (x_change @ grad_change.T))) @ hessian @ (I - (roe * (grad_change @ x_change.T)))
+         + (roe * x_change @ x_change.T))
+    return H
+
+
+def quasi_newton_minimiser(f, x0, args=(), h=1e-8, tol=1e-6, max_iter=1e5, full_output=False):
+    """
+    Return minima of f using an implementation of the BFGS method
+    :param f: objective function to be minimised
+    :param x0: initial guess for parameters
+    :param args: extra arguments to be passed to the objective function
+    :param h: for finite difference
+    :param tol: convergence criteria to stop iteration
+    :param max_iter: maximum number of iterations
+    :param full_output: return (x_min, iterations, points)
+    :return: minima of f x_min
+    """
+    x0 = np.array(x0, dtype=np.float64)
+    dims = len(x0)
+    max_iter = int(max_iter)
+    points = []
+    f_prime = gradient_callable(f, h=h)
+
+    # starting with identity matrix as inverse Hessian
+    I = np.identity(dims)
+    H = I.copy()
+    x = x0.copy()
+
+    for i in range(max_iter):
+        points.append(x)
+        grad = f_prime(x)
+
+        if np.linalg.norm(grad) < tol:  # convergence
+            if full_output:
+                return x, f(x, *args), i, points
+            return x
+
+        # search direction
+        direction = - (H @ grad)
+
+        # using backtracking line search
+        alpha = line_search(f, x, grad, direction)
+        # print(alpha)
+
+        # alpha = ls(f, f_prime, x, direction)
+        # alpha = alpha[0]
+
+        if alpha is None:
+            return x
+
+        x_new = x + (alpha * direction)
+
+        grad_new = f_prime(x_new)
+        x_change = x_new - x
+        grad_change = grad_new - grad
+
+        # update hessian via DFP method
+        H = update_hessian(H, x_change, grad_change)
+        x = x_new
+
+    print("Quasi-Newton maximum iterations reached - did not converge")
+    return x
+
+
+def minimise(f, x0, x_range=None, args=(), method: str = "quasi-newton"):
     """ Return minima of function f within x_range
 
     :param f: objective function to be minimised
     :param x0: initial guess for each parameter
     :param x_range: width of search range for each parameter (default: 0.5 * x0 in each parameter)
     :param args: arguments to be passed to the objective function
-    :param method: "gradient-descent" or "quasi-newton"
+    :param method: "gradient-descent" "quasi-newton" "univariate" default is "quasi-newton"
     :return:
     """
 
@@ -379,12 +490,29 @@ def minimise(f, x0, x_range=None, args=(), method:str ="gradient-descent"):
 
     x0 = np.array(x0, dtype=np.float64)
     x_range = np.array(x_range, dtype=np.float64)
+    dims = len(x0)
+    initial_guesses = np.zeros(dims)
+    mins = []
 
     if method == "gradient-descent":
         pass
 
+        for i in range(100):
+            x_min = gradient_descent()
 
     if method == "quasi-newton":
+
+        for i in tqdm(range(5000)):
+            for j in range(len(x0)):
+                initial_guesses[j] = (x0[j] - x_range[j]/2) + (np.random.rand() * x_range[j])
+
+            x_min = quasi_newton_minimiser(f, x0=initial_guesses, args=args)
+            mins.append(x_min)
+
+        return mins
+
+
+    if method == "univariate":
         pass
 
     return
